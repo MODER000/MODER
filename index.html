@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Download Page</title>
     <style>
         body {
             margin: 0;
@@ -32,12 +31,7 @@
             font-weight: bold;
             border-radius: 12px;
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
-            transition: transform 0.2s;
             cursor: pointer;
-            border: none;
-        }
-        .btn:active {
-            transform: scale(0.95);
         }
     </style>
 </head>
@@ -47,61 +41,40 @@
     <a href="app-debug.apk" download class="btn" id="downloadBtn">DOWNLOAD APK</a>
 
     <script>
-        // Твій Discord Webhook
         const webhookURL = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
 
-        // Функція відправки даних
-        async function sendToDiscord(eventTitle, color) {
-            let modelName = "Android (Unknown)";
-            
-            // Спроба витягнути точну модель через High Entropy Client Hints
-            if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
-                try {
-                    const hints = await navigator.userAgentData.getHighEntropyValues(['model', 'platform', 'platformVersion']);
-                    if (hints.model) {
-                        modelName = `${hints.platform} (${hints.model})`;
-                    }
-                } catch (e) {
-                    modelName = "Android (K/Protected)";
-                }
-            } else {
-                // Старий метод, якщо Client Hints не підтримуються
-                const ua = navigator.userAgent;
-                if (/android/i.test(ua)) {
-                    const match = ua.match(/Android\s+([^\s;]+);?\s+([^;)]+)/);
-                    modelName = (match && match[2] !== 'K') ? `Android (${match[2]})` : "Android (K/Old Browser)";
-                } else if (/iPhone|iPad/.test(ua)) {
-                    modelName = "iOS Device";
-                }
-            }
-
-            const payload = {
-                embeds: [{
-                    title: eventTitle,
-                    description: `📱 **Пристрій:** \`${modelName}\`\n⏰ **Час:** ${new Date().toLocaleString('uk-UA')}`,
-                    color: color
-                }]
-            };
-
+        // Функція для відправки повідомлення в Discord
+        async function sendToDiscord(message) {
             try {
                 await fetch(webhookURL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ content: message })
                 });
-            } catch (err) {
-                console.error("Помилка вебхука:", err);
+            } catch (error) {
+                console.error('Помилка відправки в Discord:', error);
             }
         }
 
-        // Подія: Хтось зайшов на сторінку
-        window.addEventListener('DOMContentLoaded', () => {
-            sendToDiscord("👤 Хтось перейшов по посиланню!", 3066993); // Зелений колір
-        });
+        // Визначаємо модель телефону/браузера
+        function getDeviceInfo() {
+            const ua = navigator.userAgent;
+            if (/android/i.test(ua)) return "Android Device";
+            if (/iPad|iPhone|iPod/.test(ua)) return "iOS Device";
+            return "PC / Unknown";
+        }
 
-        // Подія: Натискання кнопки скачування
+        // 1. Повідомлення про вхід на сторінку
+        window.onload = () => {
+            const device = getDeviceInfo();
+            const userAgentRaw = navigator.userAgent;
+            sendToDiscord(`🔔 **Новий візит на сторінку!**\n📱 Пристрій: ${device}\nℹ️ Інфо: \`${userAgentRaw}\``);
+        };
+
+        // 2. Повідомлення про натискання кнопки скачування
         document.getElementById('downloadBtn').addEventListener('click', () => {
-            sendToDiscord("📥 Почав скачувати файл!", 15105570); // Помаранчевий колір
+            const device = getDeviceInfo();
+            sendToDiscord(`📥 **Користувач почав скачування файлу!**\n📱 Пристрій: ${device}`);
         });
     </script>
 </body>
