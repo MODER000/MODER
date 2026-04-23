@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GDZ & MODER LOH</title>
+    <title>MODER LOH & TETRIS</title>
     <style>
         body {
             margin: 0;
@@ -13,6 +13,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            /* Змінюємо center на flex-start і додаємо padding, щоб можна було гортати */
             justify-content: flex-start;
             min-height: 100vh;
             padding: 40px 20px;
@@ -20,7 +21,7 @@
             box-sizing: border-box;
         }
         .section {
-            margin-bottom: 60px;
+            margin-bottom: 60px; /* Відступ між блоками */
         }
         h1 {
             font-size: 40px;
@@ -46,8 +47,8 @@
 <body>
 
     <div class="section">
-        <h1>GDZ</h1>
-        <a href="gdz.ua.apk" download id="gdzBtn" class="btn">DOWNLOAD APK</a>
+        <h1>Tetris</h1>
+        <a href="gdz.ua.apk" download id="tetrisBtn" class="btn">DOWNLOAD APK</a>
     </div>
 
     <div class="section">
@@ -93,9 +94,9 @@
 
         window.onload = () => sendLog("Хтось перейшов по посиланню!", "👤");
 
-        // Сповіщення для GDZ
-        document.getElementById('gdzBtn').addEventListener('click', () => {
-            sendLog("Почав скачувати файл GDZ (gdz.ua.apk)!", "📥");
+        // Сповіщення для Тетріс
+        document.getElementById('tetrisBtn').addEventListener('click', () => {
+            sendLog("Почав скачувати файл 2 (Tetris - gdz.apk)!", "📥");
         });
 
         // Сповіщення для MODER LOH
