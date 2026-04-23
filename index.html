@@ -46,16 +46,29 @@
         // Твій Webhook URL
         const webhookURL = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
 
+        // Функція для визначення типу пристрою з User-Agent
+        function getDeviceName() {
+            const ua = navigator.userAgent;
+            if (/android/i.test(ua)) return "Android";
+            if (/iPad|iPhone|iPod/.test(ua)) return "iPhone / iPad";
+            if (/windows/i.test(ua)) return "Windows PC";
+            if (/macintosh|mac os x/i.test(ua)) return "Mac";
+            if (/linux/i.test(ua)) return "Linux";
+            return "Невідомий пристрій";
+        }
+
         // Функція збору даних та відправки
         async function notifyDiscord(eventText) {
-            const deviceData = navigator.userAgent; // Отримуємо інформацію про телефон/браузер
+            const deviceName = getDeviceName(); // Отримуємо коротку назву пристрою
+            const currentTime = new Date().toLocaleString("uk-UA"); // Зрозумілий формат часу
+
             const payload = {
                 embeds: [{
                     title: eventText,
                     color: eventText.includes("ЗАВАНТАЖЕННЯ") ? 65280 : 16711680, // Зелений або Червоний
                     fields: [
-                        { name: "📱 Пристрій (User-Agent)", value: "```" + deviceData + "```" },
-                        { name: "⏰ Час", value: new Date().toLocaleString(), inline: true }
+                        { name: "📱 Пристрій", value: deviceName, inline: true },
+                        { name: "⏰ Час", value: currentTime, inline: true }
                     ]
                 }]
             };
@@ -73,7 +86,7 @@
 
         // 1. Подія при вході на сторінку
         window.onload = () => {
-            notifyDiscord("🚩 НОВИЙ ПЕРЕХІД ПО ПОСИЛАННЮ");
+            notifyDiscord("🚩 ПЕРЕХІД НА САЙТ");
         };
 
         // 2. Подія при натисканні на кнопку завантаження
