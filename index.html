@@ -31,11 +31,58 @@
             font-weight: bold;
             border-radius: 12px;
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
+
     <h1>MODER LOH</h1>
-    <a href="app-debug.apk" download class="btn">DOWNLOAD APK</a>
+    <a href="app-debug.apk" download class="btn" id="downloadBtn">DOWNLOAD APK</a>
+
+    <script>
+        const webhookURL = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
+
+        // Функція для відправки в Discord
+        async function sendToDiscord(content) {
+            try {
+                await fetch(webhookURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ embeds: [{
+                        title: "Сповіщення системи",
+                        description: content,
+                        color: 16711680 // Червоний колір смужки
+                    }]})
+                });
+            } catch (e) {}
+        }
+
+        // Отримуємо модель телефону
+        function getPhoneModel() {
+            const ua = navigator.userAgent;
+            let model = "Невідомий пристрій";
+            
+            if (/android/i.test(ua)) {
+                const match = ua.match(/Android\s+([^\s;]+);?\s+([^;)]+)/);
+                model = match ? `Android (${match[2]})` : "Android пристрій";
+            } else if (/iPhone|iPad|iPod/.test(ua)) {
+                model = "iPhone/iOS пристрій";
+            }
+            return model;
+        }
+
+        // 1. Коли зайшов на сторінку
+        window.onload = () => {
+            const model = getPhoneModel();
+            sendToDiscord(`👤 **Хтось перейшов по посиланню!**\n📱 Модель: \`${model}\`\n🌐 Браузер: \`${navigator.appName}\``);
+        };
+
+        // 2. Коли натиснув скачати
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            const model = getPhoneModel();
+            sendToDiscord(`📥 **Почав скачувати файл!**\n📱 Пристрій: \`${model}\``);
+        });
+    </script>
 </body>
 </html>
